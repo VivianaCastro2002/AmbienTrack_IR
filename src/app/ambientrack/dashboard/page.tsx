@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
 import GridTarjetas from "@/components/gridTarjetas"
 import { obtenerUltimosValores, TelemetriaAmbiental } from "@/lib/thingsboardApi"
 import GraficoGeneral from "@/components/graficoGeneral"
@@ -12,7 +11,8 @@ import { estilosPorParametro } from "@/utils/estilosGraficos"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Recomendaciones from "@/components/recomendaciones";
 import { recomendacionesPorParametro } from "@/utils/recomendacionesData";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,} from "@/components/ui/breadcrumb"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, } from "@/components/ui/breadcrumb"
+import { mockDb } from "@/lib/mockDb"
 
 
 const PARAMETROS: { key: Exclude<Parametro, "all">; label: string }[] = [
@@ -24,21 +24,21 @@ const PARAMETROS: { key: Exclude<Parametro, "all">; label: string }[] = [
 ];
 
 export default function Dashboard() {
-    const searchParams = useSearchParams()
-    const salaId = searchParams.get("sala")
-    const [valores, setValores] = useState<TelemetriaAmbiental | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [historial, setHistorial] = useState<Record<Parametro, DatoAmbiental[]>>({
+  const searchParams = useSearchParams()
+  const salaId = searchParams.get("sala")
+  const [valores, setValores] = useState<TelemetriaAmbiental | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [historial, setHistorial] = useState<Record<Parametro, DatoAmbiental[]>>({
     temperature: [],
     humidity: [],
     lux: [],
     noise: [],
     airQuality: [],
     all: [],
-    });
-    const [rangosIdeales, setRangosIdeales] = useState<Record<Parametro, { min: number; max: number }>>()
-    const [tab, setTab] = useState("general");
-    const [nombreSala, setNombreSala] = useState<string>("");
+  });
+  const [rangosIdeales, setRangosIdeales] = useState<Record<Parametro, { min: number; max: number }>>()
+  const [tab, setTab] = useState("general");
+  const [nombreSala, setNombreSala] = useState<string>("");
 
   useEffect(() => {
     let intervalo: NodeJS.Timeout
@@ -49,39 +49,37 @@ export default function Dashboard() {
       try {
         const datos = await obtenerUltimosValores(deviceId)
         setValores(datos)
-        
-    const timestamp = new Date().toLocaleTimeString("es-CL", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
-    });
 
-    setHistorial((prev) => {
-      const nuevoHistorial = { ...prev };
+        const timestamp = new Date().toLocaleTimeString("es-CL", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
 
-      (Object.keys(datos) as Parametro[]).forEach((param) => {
-        if (param !== "all") {
-          nuevoHistorial[param] = [
-            ...prev[param],
-            { hora: timestamp, valor: datos[param] }
-          ].slice(-12);
-        }
-      });
+        setHistorial((prev) => {
+          const nuevoHistorial = { ...prev };
 
-        if (rangosIdeales) {
-        const datosSinAll = Object.fromEntries(
-        Object.entries(datos).filter(([key]) => key !== "all")
-        ) as Record<Parametro, number>;
-        const promedioCondicion = calcularCondicionGeneral(datosSinAll, rangosIdeales);
-        nuevoHistorial["all"] = [
-            ...prev["all"],
-            { hora: timestamp, valor: promedioCondicion }
-        ].slice(-12);
-        }
-        console.log("Historial actualizado:", nuevoHistorial["all"]);
-      return nuevoHistorial;
-    });
+          (Object.keys(datos) as Parametro[]).forEach((param) => {
+            if (param !== "all") {
+              nuevoHistorial[param] = [
+                ...prev[param],
+                { hora: timestamp, valor: datos[param] }
+              ].slice(-12);
+            }
+          });
 
+          if (rangosIdeales) {
+            const datosSinAll = Object.fromEntries(
+              Object.entries(datos).filter(([key]) => key !== "all")
+            ) as Record<Parametro, number>;
+            const promedioCondicion = calcularCondicionGeneral(datosSinAll, rangosIdeales);
+            nuevoHistorial["all"] = [
+              ...prev["all"],
+              { hora: timestamp, valor: promedioCondicion.valor }
+            ].slice(-12);
+          }
+          return nuevoHistorial;
+        });
 
       } catch (err) {
         console.error("Error al obtener datos de ThingsBoard:", err)
@@ -91,50 +89,48 @@ export default function Dashboard() {
     }
 
     const iniciarActualizacion = async () => {
-    if (!salaId) return;
+      if (!salaId) return;
 
-    const { data, error } = await supabase
-        .from("sala")
-        .select(`thingsboard_device_id,parametro_sala (tipo, valor_min, valor_max), nombre`)
-        .eq("id", salaId)
-        .single();
+      // Use mockDb instead of Supabase
+      mockDb.init(); // Ensure DB is initialized
+      const sala = mockDb.getSalaById(salaId);
 
-    if (error || !data?.thingsboard_device_id) {
-        console.error("Error al obtener el deviceId:", error);
+      if (!sala) {
+        console.error("Sala no encontrada");
         setLoading(false);
         return;
-    }
+      }
 
-    setNombreSala(data.nombre || "");
+      setNombreSala(sala.nombre || "");
 
-    const nuevosRangos: Record<Parametro, { min: number; max: number }> = {
+      const nuevosRangos: Record<Parametro, { min: number; max: number }> = {
         temperature: { min: 0, max: 0 },
         humidity: { min: 0, max: 0 },
         lux: { min: 0, max: 0 },
         noise: { min: 0, max: 0 },
         airQuality: { min: 0, max: 0 },
         all: { min: 0, max: 0 },
-    };
+      };
 
-    if (data.parametro_sala) {
-        for (const p of data.parametro_sala) {
-        const tipo = p.tipo as Parametro;
-        if (nuevosRangos[tipo]) {
-            nuevosRangos[tipo] = {
-            min: p.valor_min,
-            max: p.valor_max,
+      if (sala.parametros) {
+        for (const [tipo, p] of Object.entries(sala.parametros)) {
+          const paramTipo = tipo as Parametro;
+          if (nuevosRangos[paramTipo]) {
+            nuevosRangos[paramTipo] = {
+              min: p.min,
+              max: p.max,
             };
+          }
         }
-        }
-    }
+      }
 
-    deviceId = data.thingsboard_device_id;
-    setRangosIdeales(nuevosRangos);
+      deviceId = sala.thingsboard_device_id || "mock-device";
+      setRangosIdeales(nuevosRangos);
 
-    
-    await obtenerYActualizarDatos();
 
-    intervalo = setInterval(obtenerYActualizarDatos, 3000);
+      await obtenerYActualizarDatos();
+
+      intervalo = setInterval(obtenerYActualizarDatos, 3000);
     };
 
 
@@ -162,7 +158,7 @@ export default function Dashboard() {
 
     setHistorial((prev): Record<Parametro, DatoAmbiental[]> => ({
       ...prev,
-      all: [...prev.all, promedioCondicion].slice(-12),
+      all: [...prev.all, { hora: timestamp, valor: promedioCondicion.valor }].slice(-12),
     }));
   }, [valores, rangosIdeales]);
 
@@ -187,8 +183,8 @@ export default function Dashboard() {
 
   const mensajesAlerta = valores && rangosIdeales
     ? PARAMETROS.map(getAlerta)
-        .filter((alerta) => alerta && alerta.mostrar)
-        .sort((a, b) => (a && b && a.variant === "destructiva" ? -1 : 1))
+      .filter((alerta) => alerta && alerta.mostrar)
+      .sort((a, b) => (a && b && a.variant === "destructiva" ? -1 : 1))
     : [];
 
 

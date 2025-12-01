@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabaseClient"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,20 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Trash2, Edit, Plus } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-
-interface ParametroIdeal {
-  min: number
-  max: number
-  unidad: string
-}
-
-interface Sala {
-  id: string
-  nombre: string
-  parametros: Record<string, ParametroIdeal>
-  thingsboard_device_id?: string
-  thingsboard_access_token?: string
-}
+import { mockDb, Sala, ParametroIdeal } from "@/lib/mockDb"
 
 const UNIDADES: Record<string, string> = {
   temperature: "°C",
@@ -51,37 +37,18 @@ export default function GestionSalas() {
   const router = useRouter()
 
   useEffect(() => {
+    mockDb.init()
     cargarSalas()
   }, [])
 
-  const cargarSalas = async () => {
-    const { data: salasRaw } = await supabase.from("sala").select("id, nombre, thingsboard_device_id, thingsboard_access_token")
-    if (!salasRaw) return
-
-    const salasConParametros: Sala[] = []
-    for (const sala of salasRaw) {
-      const { data: parametros } = await supabase
-        .from("parametro_sala")
-        .select("tipo, valor_min, valor_max")
-        .eq("sala_id", sala.id)
-
-      const paramObj: Record<string, ParametroIdeal> = {}
-      parametros?.forEach((p) => {
-        paramObj[p.tipo] = {
-          min: p.valor_min,
-          max: p.valor_max,
-          unidad: UNIDADES[p.tipo]
-        }
-      })
-
-      salasConParametros.push({ id: sala.id, nombre: sala.nombre, parametros: paramObj, thingsboard_device_id: sala.thingsboard_device_id, thingsboard_access_token: sala.thingsboard_access_token })
-    }
-    setSalas(salasConParametros)
+  const cargarSalas = () => {
+    const salasData = mockDb.getSalas()
+    setSalas(salasData)
   }
 
   const abrirModalCrear = () => {
     setSalaEditando(null)
-    setFormulario({ nombre: "", parametros: defaultParametros() })
+    setFormulario({ nombre: "", parametros: defaultParametros(), deviceId: "", accessToken: "" })
     setModalAbierto(true)
   }
 
@@ -105,41 +72,27 @@ export default function GestionSalas() {
     }
   }
 
-  const guardarSala = async () => {
+  const guardarSala = () => {
     if (!formulario.nombre) return
 
+    const salaData = {
+      nombre: formulario.nombre,
+      thingsboard_device_id: formulario.deviceId,
+      thingsboard_access_token: formulario.accessToken,
+      parametros: formulario.parametros
+    }
+
     if (salaEditando) {
-      await supabase.from("sala").update({ nombre: formulario.nombre, thingsboard_device_id:formulario.deviceId, thingsboard_access_token:formulario.accessToken }).eq("id", salaEditando.id)
-      for (const tipo of keysParametros) {
-        const p = formulario.parametros[tipo]
-        await supabase.from("parametro_sala").upsert({
-          sala_id: salaEditando.id,
-          tipo,
-          valor_min: p.min,
-          valor_max: p.max
-        })
-      }
+      mockDb.updateSala(salaEditando.id, salaData)
     } else {
-      const { data: nuevaSala } = await supabase.from("sala").insert({ nombre: formulario.nombre, thingsboard_device_id:formulario.deviceId, thingsboard_access_token:formulario.accessToken }).select().single()
-      if (nuevaSala) {
-        for (const tipo of keysParametros) {
-          const p = formulario.parametros[tipo]
-          await supabase.from("parametro_sala").insert({
-            sala_id: nuevaSala.id,
-            tipo,
-            valor_min: p.min,
-            valor_max: p.max
-          })
-        }
-      }
+      mockDb.createSala(salaData)
     }
     setModalAbierto(false)
     cargarSalas()
   }
 
-  const eliminarSala = async (id: string) => {
-    await supabase.from("parametro_sala").delete().eq("sala_id", id)
-    await supabase.from("sala").delete().eq("id", id)
+  const eliminarSala = (id: string) => {
+    mockDb.deleteSala(id)
     cargarSalas()
   }
 
@@ -179,26 +132,26 @@ export default function GestionSalas() {
                 </div>
                 <div className="space-y-2">
 
-                <Label htmlFor="device_id">ID del Dispositivo (ThingsBoard)</Label>
-                <Input
-                  id="device_id"
-                  value={formulario.deviceId ?? ""}
-                  onChange={(e) =>
-                    setFormulario((f) => ({ ...f, deviceId: e.target.value }))
-                  }
-                />
-              </div>
+                  <Label htmlFor="device_id">ID del Dispositivo (ThingsBoard)</Label>
+                  <Input
+                    id="device_id"
+                    value={formulario.deviceId ?? ""}
+                    onChange={(e) =>
+                      setFormulario((f) => ({ ...f, deviceId: e.target.value }))
+                    }
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="access_token">Access Token del Dispositivo</Label>
-                <Input
-                  id="access_token"
-                  value={formulario.accessToken ?? ""}
-                  onChange={(e) =>
-                    setFormulario((f) => ({ ...f, accessToken: e.target.value }))
-                  }
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="access_token">Access Token del Dispositivo</Label>
+                  <Input
+                    id="access_token"
+                    value={formulario.accessToken ?? ""}
+                    onChange={(e) =>
+                      setFormulario((f) => ({ ...f, accessToken: e.target.value }))
+                    }
+                  />
+                </div>
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Parámetros Ideales</h3>
