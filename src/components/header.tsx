@@ -12,34 +12,16 @@ export default function DashboardHeader() {
   const router = useRouter()
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      const userId = session?.user?.id
-
-      if (!userId) return
-
-      const { data, error } = await supabase
-        .from("perfil")
-        .select("nombre, apellido, tipo_usuario")
-        .eq("id", userId)
-        .single()
-
-      if (error) {
-        console.error("Error cargando perfil:", error.message)
-        return
-      }
-
-      setUser({
-        name: `${data.nombre} ${data.apellido}`,
-        role: data.tipo_usuario
-      })
-    }
-
-    fetchUserData()
+    // Mock admin user directly
+    setUser({
+      name: "Admin User",
+      role: "admin"
+    })
   }, [])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    // Just redirect to home (which redirects back to dashboard in this new flow, 
+    // or we could make it actually 'logout' if we wanted, but for now just redirect)
     router.push("/")
   }
 
@@ -59,7 +41,7 @@ export default function DashboardHeader() {
                 <div className="flex flex-col items-start">
                   <span className="text-sm font-medium">{user.name}</span>
                   {/* <span className="text-xs text-gray-500 capitalize">{user.role}</span>s */}
-                   
+
                 </div>
                 {isDropdownOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
