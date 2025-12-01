@@ -9,7 +9,6 @@ export type Parametro =
   | "temperature"
   | "humidity"
   | "lux"
-  | "noise"
   | "airQuality"
   | "all";
 
@@ -17,7 +16,6 @@ export const NOMBRES_PARAMETROS: Record<Parametro, string> = {
   temperature: "Temperatura",
   humidity: "Humedad",
   lux: "Iluminación",
-  noise: "Ruido",
   airQuality: "Calidad de aire",
   all: "Ambiente General",
 };

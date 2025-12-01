@@ -19,7 +19,6 @@ const defaultParametros = (): Record<string, ParametroIdeal> => {
         temperature: { min: 20, max: 24, unidad: "°C" },
         humidity: { min: 40, max: 60, unidad: "%" },
         lux: { min: 300, max: 500, unidad: "lux" },
-        noise: { min: 0, max: 200, unidad: "pdm" },
         airQuality: { min: 0, max: 750, unidad: "AQI" }
     }
 }

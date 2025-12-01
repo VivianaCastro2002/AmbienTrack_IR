@@ -63,19 +63,6 @@ export const recomendacionesPorParametro: Record<string, Record<string, string[]
     ]
   },
 
-  noise: {
-    "alto": [
-      "Identificar y aislar la fuente de ruido",
-      "Usar paneles acústicos o materiales absorbentes",
-      "Cambiar el horario de operación de fuentes ruidosas"
-    ],
-    "muy alto": [
-      "Suspender actividades ruidosas si es posible",
-      "Implementar aislamiento acústico o barreras",
-      "Usar protección auditiva para personas expuestas"
-    ]
-  },
-
   airQuality: {
     "baja": [
       "Ventilar el ambiente si el aire exterior es mejor",

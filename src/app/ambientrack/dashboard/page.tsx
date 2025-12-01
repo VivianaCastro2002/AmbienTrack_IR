@@ -19,7 +19,6 @@ const PARAMETROS: { key: Exclude<Parametro, "all">; label: string }[] = [
   { key: "temperature", label: "Temperatura" },
   { key: "humidity", label: "Humedad" },
   { key: "lux", label: "Iluminación" },
-  { key: "noise", label: "Ruido" },
   { key: "airQuality", label: "Calidad de aire" },
 ];
 
@@ -32,7 +31,6 @@ export default function Dashboard() {
     temperature: [],
     humidity: [],
     lux: [],
-    noise: [],
     airQuality: [],
     all: [],
   });
@@ -107,7 +105,6 @@ export default function Dashboard() {
         temperature: { min: 0, max: 0 },
         humidity: { min: 0, max: 0 },
         lux: { min: 0, max: 0 },
-        noise: { min: 0, max: 0 },
         airQuality: { min: 0, max: 0 },
         all: { min: 0, max: 0 },
       };

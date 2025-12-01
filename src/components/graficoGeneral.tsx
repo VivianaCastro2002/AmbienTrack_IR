@@ -21,7 +21,6 @@ export default function GraficoGeneral({ valores, historial }: Props) {
     "temperature",
     "humidity",
     "lux",
-    "noise",
     "airQuality",
   ];
 
@@ -29,7 +28,6 @@ export default function GraficoGeneral({ valores, historial }: Props) {
     temperature: "Temperatura",
     humidity: "Humedad",
     lux: "Iluminación",
-    noise: "Ruido",
     airQuality: "Calidad del Aire",
     all: "Ambiente General",
   };
