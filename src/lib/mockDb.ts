@@ -7,6 +7,10 @@ export interface ParametroIdeal {
 export interface Sala {
     id: string
     nombre: string
+    tipo?: string
+    descripcion?: string
+    activa?: boolean
+    createdAt?: string
     parametros: Record<string, ParametroIdeal>
     thingsboard_device_id?: string
     thingsboard_access_token?: string
@@ -35,9 +39,14 @@ export const mockDb = {
         return salas.find((s) => s.id === id);
     },
 
-    createSala: (sala: Omit<Sala, "id">): Sala => {
+    createSala: (sala: Omit<Sala, "id" | "createdAt" | "activa">): Sala => {
         const salas = mockDb.getSalas();
-        const newSala = { ...sala, id: crypto.randomUUID() };
+        const newSala = {
+            ...sala,
+            id: crypto.randomUUID(),
+            activa: true,
+            createdAt: new Date().toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        };
         salas.push(newSala);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(salas));
         return newSala;
@@ -68,6 +77,10 @@ export const mockDb = {
                 {
                     id: "1",
                     nombre: "Sala de Reuniones",
+                    tipo: "Auditorio",
+                    descripcion: "Sala de conferencias principal",
+                    activa: true,
+                    createdAt: "10-01-2024",
                     parametros: defaultParametros(),
                     thingsboard_device_id: "mock-device-1",
                     thingsboard_access_token: "mock-token-1"
@@ -75,6 +88,10 @@ export const mockDb = {
                 {
                     id: "2",
                     nombre: "Oficina Principal",
+                    tipo: "Oficina",
+                    descripcion: "Oficina principal del edificio",
+                    activa: true,
+                    createdAt: "14-01-2024",
                     parametros: defaultParametros(),
                     thingsboard_device_id: "mock-device-2",
                     thingsboard_access_token: "mock-token-2"
