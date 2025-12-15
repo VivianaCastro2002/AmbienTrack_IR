@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import GridTarjetas from "@/components/gridTarjetas"
+import { Button } from "@/components/ui/button"
+import { PowerOff } from "lucide-react"
 import { obtenerUltimosValores, TelemetriaAmbiental } from "@/lib/thingsboardApi"
 import GraficoGeneral from "@/components/graficoGeneral"
 import { Parametro, DatoAmbiental, calcularCondicionGeneral, evaluarParametro } from "@/utils/parametros"
@@ -24,9 +26,11 @@ const PARAMETROS: { key: Exclude<Parametro, "all">; label: string }[] = [
 
 export default function Dashboard() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const salaId = searchParams.get("sala")
   const [valores, setValores] = useState<TelemetriaAmbiental | null>(null)
   const [loading, setLoading] = useState(true)
+  const [salaActiva, setSalaActiva] = useState(true)
   const [historial, setHistorial] = useState<Record<Parametro, DatoAmbiental[]>>({
     temperature: [],
     humidity: [],
@@ -100,6 +104,13 @@ export default function Dashboard() {
       }
 
       setNombreSala(sala.nombre || "");
+
+      if (sala.activa === false) {
+        setSalaActiva(false);
+        setLoading(false);
+        return;
+      }
+      setSalaActiva(true);
 
       const nuevosRangos: Record<Parametro, { min: number; max: number }> = {
         temperature: { min: 0, max: 0 },
@@ -223,38 +234,55 @@ export default function Dashboard() {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full px-6">
-            <TabsTrigger value="general">Vista General</TabsTrigger>
-            <TabsTrigger value="recomendaciones">Recomendaciones</TabsTrigger>
-          </TabsList>
-          <TabsContent value="general">
-            {loading && <p>Cargando datos...</p>}
-            {!loading && valores && rangosIdeales && (
-              <GridTarjetas valores={valores} rangosIdeales={rangosIdeales} />
-            )}
-            {!loading && valores && rangosIdeales && (
-              <GraficoGeneral
-                valores={valores}
-                historial={historial}
-                setHistorial={setHistorial}
-              />
-            )}
-            {mensajesAlerta.map((alerta, idx) => (
-              alerta && (
-                <Alertas
-                  key={idx}
-                  mensaje={alerta.mensaje}
-                  variant={alerta.variant}
-                  onVerRecomendaciones={() => setTab("recomendaciones")}
+        {!salaActiva ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
+            <div className="p-6 bg-gray-100 rounded-full">
+              <PowerOff className="w-12 h-12 text-gray-400" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-gray-900">Sala Inactiva</h2>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Esta sala se encuentra desactivada actualmente. Para ver las métricas y el estado ambiental, debes activarla desde la gestión de salas.
+              </p>
+            </div>
+            <Button onClick={() => router.push("/ambientrack/gestion-salas")}>
+              Volver a Gestión de Salas
+            </Button>
+          </div>
+        ) : (
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="w-full px-6">
+              <TabsTrigger value="general">Vista General</TabsTrigger>
+              <TabsTrigger value="recomendaciones">Recomendaciones</TabsTrigger>
+            </TabsList>
+            <TabsContent value="general">
+              {loading && <p>Cargando datos...</p>}
+              {!loading && valores && rangosIdeales && (
+                <GridTarjetas valores={valores} rangosIdeales={rangosIdeales} />
+              )}
+              {!loading && valores && rangosIdeales && (
+                <GraficoGeneral
+                  valores={valores}
+                  historial={historial}
+                  setHistorial={setHistorial}
                 />
-              )
-            ))}
-          </TabsContent>
-          <TabsContent value="recomendaciones">
-            <Recomendaciones recomendaciones={recomendaciones} />
-          </TabsContent>
-        </Tabs>
+              )}
+              {mensajesAlerta.map((alerta, idx) => (
+                alerta && (
+                  <Alertas
+                    key={idx}
+                    mensaje={alerta.mensaje}
+                    variant={alerta.variant}
+                    onVerRecomendaciones={() => setTab("recomendaciones")}
+                  />
+                )
+              ))}
+            </TabsContent>
+            <TabsContent value="recomendaciones">
+              <Recomendaciones recomendaciones={recomendaciones} />
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </main>
   )
